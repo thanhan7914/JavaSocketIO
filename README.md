@@ -1,5 +1,5 @@
 # JavaSocketIO
-### Using:
+### Usage:
 1. Server
 
    Create server listen port 6969
