@@ -1,5 +1,7 @@
 package example;
 import java.io.IOException;
+import java.util.Scanner;
+
 import socket.io.*;
 
 public class TestClient {
@@ -19,6 +21,17 @@ public class TestClient {
 		});
 		
 		System.out.println("connected!");
-		client.emit(("Client: ok test").getBytes());
+		client.emit("Console: ok test");
+		
+		Scanner sc=new Scanner(System.in);
+		while(true) {
+			System.out.print("Message: ");
+			String msg = sc.nextLine();
+			
+			if(msg.trim().equals("quit")) break;
+			client.emit("Console: " + msg);
+		}
+		
+		client.close();
 	}
 }

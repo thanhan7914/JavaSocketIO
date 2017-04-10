@@ -18,7 +18,7 @@ public class frmGUI extends javax.swing.JFrame {
         
         try {
             client = new Client("127.0.0.1", 6969);
-            jTextField1.setText("User 0");
+            jTextField1.setText("GUI 0");
             
             client.onData(new EventHandler<byte[]>() {
                 public void handle(Object sender, byte[] data) {
