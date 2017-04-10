@@ -64,4 +64,4 @@
     ~~~~
     Send data
     
-    `client.emit(("Client: ok test").getBytes());`
+    `client.emit("Client: ok test");`
