@@ -43,7 +43,7 @@ public class Client extends Thread {
 		this.start();
 		
 		byte[] rdata = ping(new byte[] {ACK, ENQ, GET_ID});
-		this._clientId = rdata[0] | rdata[1] << 8 | rdata[2] << 16 | rdata[3];
+		this._clientId = rdata[0] | rdata[1] << 8 | rdata[2] << 16 | rdata[3] << 24;
 	}
 	
 	public void run() {
