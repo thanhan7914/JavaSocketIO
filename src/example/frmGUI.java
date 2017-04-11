@@ -18,10 +18,11 @@ public class frmGUI extends javax.swing.JFrame {
         
         try {
             client = new Client("127.0.0.1", 6969);
-            jTextField1.setText("GUI 0");
+            client.join("game");
+            jTextField1.setText("GUI " + client.getClientId());
             
             client.onData(new EventHandler<byte[]>() {
-                public void handle(Object sender, byte[] data) {
+                public void handle(Object sender, String name, byte[] data) {
                     try {
                         String str = new String(data, "UTF-8");
                         
@@ -31,7 +32,9 @@ public class frmGUI extends javax.swing.JFrame {
                 }
             });
         }
-        catch(IOException e){}
+        catch(IOException e){
+        	e.printStackTrace();
+        }
     }
 
     /**

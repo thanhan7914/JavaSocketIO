@@ -11,7 +11,7 @@ public class TestClient {
 		client.onData(new EventHandler<byte[]>() {
 			
 			@Override
-			public void handle(Object sender, byte[] data) {
+			public void handle(Object sender, String name, byte[] data) {
 				try {
 					//get data
 					System.out.println("Client recieve data " + new String(data, "UTF-8"));
@@ -29,9 +29,10 @@ public class TestClient {
 			String msg = sc.nextLine();
 			
 			if(msg.trim().equals("quit")) break;
-			client.emit("Console: " + msg);
+			client.emit("Console  " + client.getClientId() + ": " + msg);
 		}
 		
 		client.close();
+		sc.close();
 	}
 }
