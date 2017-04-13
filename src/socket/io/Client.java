@@ -16,15 +16,17 @@ public class Client extends Thread {
     private boolean _waitSend = false;
     private boolean _isAlive = true;
     private boolean _isBlock = false;
-    private EventHandler<byte[]> _eventDataComming = null;
-    private EventHandler<byte[]> _eventDisconnect = null;
+    private EventDataComing _eventDataComing = null;
+    private EventDisconnect _eventDisconnect = null;
     private String _path = "/";
     //const
     private final byte ACK = 0b0110;
     private final byte ENQ = 0b0101;
     private final byte ETB = 0b00010111;
     private final byte GET_ID = 0b0;
-    private final byte SET_PATH = 0b1; 
+    private final byte SET_PATH = 0b1;
+    //temp
+    private byte[] _tmp;
 	
 	public Client(Server server, Socket socket) throws IOException {
 		super();
@@ -35,7 +37,7 @@ public class Client extends Thread {
 		this._outputStream = new DataOutputStream(_socket.getOutputStream());
 	}
 	
-	public Client(String host, int port) throws IOException {
+	public Client(String host, int port) throws IOException, InterruptedException {
 		this._clientId = count++;
 		this._socket = new Socket(host, port);
 		this._inputStream = new DataInputStream(_socket.getInputStream());
@@ -49,20 +51,25 @@ public class Client extends Thread {
 	public void run() {
 		while(_isAlive) {
 			try {
-				while(_isBlock) Thread.sleep(10);
 				int length = _inputStream.readInt();
 
 				if(length > 0) {
 				    byte[] buf = new byte[length];
 				    _inputStream.readFully(buf);
-				    if(buf[0] == ACK && buf[1] == ENQ)
+
+				    if(_isBlock)
+				    {
+				    	_tmp = buf.clone();
+				    	_isBlock = false;
+				    }
+				    else if(buf[0] == ACK && buf[1] == ENQ)
 				    	pong(buf);
 				    else
 				    {
-					    if(_eventDataComming != null)
-					    	_eventDataComming.handle(this, "data", buf);
+					    if(_eventDataComing != null)
+					    	_eventDataComing.onDataComing(this, buf);
 					    if(_server != null)
-					    	_server.DataRecieve(this, buf);
+					    	_server.dataRecieve(this, buf);
 				    }
 				}
 			}
@@ -75,7 +82,9 @@ public class Client extends Thread {
 		}
 		
 		if(_eventDisconnect != null)
-			_eventDisconnect.handle(this, "disconnect", null);
+			_eventDisconnect.onDisconnect(this);
+		if(_server != null)
+			_server.clientDisconnect(this);
 
 		try {
 			close();
@@ -91,42 +100,32 @@ public class Client extends Thread {
 		return this._path;
 	}
 	
-	public Client join(String room) {
-		if(room == "") return this;
+	public Client join(String room) throws IOException, InterruptedException {
+		room = room.trim();
+		if(room.equals("") || room.equals("/")) return this;
 		room = room.trim();
 		room = room.replaceAll("//", "/");
-		if(room.startsWith("/")) room = room.substring(1);
+		if(!room.startsWith("/")) room = "/" + room;
 		if(!room.endsWith("/")) room += "/";
+		if(room.equals(_path)) return this;
 		
-		this._path = this._path + room;
-		try {
-			byte[] pdata = _path.getBytes();
-			byte[] header = new byte[] {ACK, ENQ, SET_PATH};
-			byte[] data = new byte[pdata.length + 3];
-			System.arraycopy(header, 0, data, 0, 3);
-			System.arraycopy(pdata, 0, data, 3, pdata.length);
-			
-			ping(data);
-		}
-		catch(IOException ioe) {}
+		this._path = room;
+		
+		byte[] pdata = _path.getBytes();
+		byte[] header = new byte[] {ACK, ENQ, SET_PATH};
+		byte[] data = new byte[pdata.length + 3];
+		System.arraycopy(header, 0, data, 0, 3);
+		System.arraycopy(pdata, 0, data, 3, pdata.length);
+		
+		ping(data);		
 		return this;
 	}
 	
-	public byte[] ping(byte[] data) throws IOException {
+	public byte[] ping(byte[] data) throws IOException, InterruptedException {
 		_isBlock = true;
 		emit(data);
-		
-		int length = _inputStream.readInt();
-
-		if(length > 0) {
-		    byte[] buf = new byte[length];
-		    _inputStream.readFully(buf);
-		    _isBlock = false;
-		    
-		    return buf;
-		}
-		
-		throw new IOException("ping failed.");
+		while(_isBlock) Thread.sleep(10);
+		return _tmp;
 	}
 	
 	private void pong(byte[] data) throws Exception {
@@ -147,9 +146,12 @@ public class Client extends Thread {
 		{
 			byte[] pdata = Arrays.copyOfRange(data, 3, data.length);
 			String path = new String(pdata, "UTF-8");
+			String from = this._path;
 			this._path = path;
 			
 			emit(new byte[] {ETB, ACK});
+			if(_server != null)
+				_server.clientJoinRoom(this, from, getPath());
 		}
 		}
 	}
@@ -162,8 +164,28 @@ public class Client extends Thread {
 		_waitSend = false;
 	}
 	
-	public void emit(String data) throws IOException {
-		emit(data.getBytes("UTF-8"));
+	public void emit(String value) throws IOException {
+		emit(Util.stringToByteArrayWithUtf8(value));
+	}
+	
+	public void emit(float... floats) throws IOException {
+		emit(Util.toByteArray(floats));
+	}
+	
+	public void emit(int... integers) throws IOException {
+		emit(Util.toByteArray(integers));
+	}
+	
+	public void emit(long... longs) throws IOException {
+		emit(Util.toByteArray(longs));
+	}
+	
+	public void emit(double... doubles) throws IOException {
+		emit(Util.toByteArray(doubles));
+	}
+	
+	public void emit(boolean b) throws IOException {
+		emit(Util.toByteArray(b));
 	}
 	
 	public void broadcastEmit(byte[] data) throws IOException {
@@ -172,8 +194,27 @@ public class Client extends Thread {
 	}
 	
 	public void broadcastEmit(String data) throws IOException {
-		if(_server != null)
-			_server.emit(this, data.getBytes("UTF-8"));
+		broadcastEmit(Util.stringToByteArrayWithUtf8(data));
+	}
+	
+	public void broadcastEmit(float... floats) throws IOException {
+		broadcastEmit(Util.toByteArray(floats));
+	}
+	
+	public void broadcastEmit(int... integers) throws IOException {
+		broadcastEmit(Util.toByteArray(integers));
+	}
+	
+	public void broadcastEmit(long... longs) throws IOException {
+		broadcastEmit(Util.toByteArray(longs));
+	}
+	
+	public void broadcastEmit(double... doubles) throws IOException {
+		broadcastEmit(Util.toByteArray(doubles));
+	}
+	
+	public void broadcastEmit(boolean b) throws IOException {
+		broadcastEmit(Util.toByteArray(b));
 	}
 	
 	public void emitAsync(byte[] data) {
@@ -188,11 +229,35 @@ public class Client extends Thread {
 		}).start();
 	}
 	
-	public void onData(EventHandler<byte[]> eventDataComming) {
-		this._eventDataComming = eventDataComming;
+	public void emitAsync(String value) throws IOException {
+		emitAsync(Util.stringToByteArrayWithUtf8(value));
 	}
 	
-	public void onDisconnect(EventHandler<byte[]> eventDisconnect) {
+	public void emitAsync(float... floats) throws IOException {
+		emitAsync(Util.toByteArray(floats));
+	}
+	
+	public void emitAsync(int... integers) throws IOException {
+		emitAsync(Util.toByteArray(integers));
+	}
+	
+	public void emitAsync(long... longs) throws IOException {
+		emitAsync(Util.toByteArray(longs));
+	}
+	
+	public void emitAsync(double... doubles) throws IOException {
+		emitAsync(Util.toByteArray(doubles));
+	}
+	
+	public void emitAsync(boolean b) throws IOException {
+		emitAsync(Util.toByteArray(b));
+	}
+	
+	public void onDataComing(EventDataComing eventDataComing) {
+		this._eventDataComing = eventDataComing;
+	}
+	
+	public void onDisconnect(EventDisconnect eventDisconnect) {
 		this._eventDisconnect = eventDisconnect;
 	}
 	

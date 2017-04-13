@@ -8,34 +8,31 @@ public class MainServer {
 		
 		listener.listen();
 		System.out.println("Server listen on port " + listener.getLocalPort());
-		listener.onConnection(new EventHandler<Client>() {
+		listener.onConnection(new EventConnection() {
 			@Override
-			public void handle(Object sender, String name, Client client) {
+			public void onConnection(Server server, Client client) {
 				System.out.println("new connection, id: " + client.getClientId());
 				
-				client.onDisconnect(new EventHandler<byte[]>() {
+				client.onDisconnect(new EventDisconnect() {
 					@Override
-					public void handle(Object sender, String name, byte[] data) {
+					public void onDisconnect(Client sender) {
 						System.out.println("clientId: " + client.getClientId() + " disconnect.");
 					}
 				});
 				
-				client.onData(new EventHandler<byte[]> () {
+				client.onDataComing(new EventDataComing () {
 					@Override
-					public void handle(Object sender, String name, byte[] data) {
-						try {
-							System.out.println("clientId: " + client.getClientId() + " recieve data: " + new String(data, "UTF-8"));
-						}catch(Exception exc){}
+					public void onDataComing(Client sender, byte[] data) {
+						System.out.println("clientId: " + client.getClientId() + " recieve data: " + Util.byteArrayToString(data, "UTF-8"));
 					}
 				});
 			}
 		});
 		
-		listener.onData(new EventHandler<byte[]>() {
+		listener.onDataComing(new EventDataComing() {
 			@Override
-			public void handle(Object sender, String name, byte[] data) {
+			public void onDataComing(Client client, byte[] data) {
 				try {
-					Client client = (Client)sender;
 					System.out.println("recieve data: " + new String(data, "UTF-8"));
 //					listener.emit(data);
 					client.broadcastEmit(data);
@@ -44,14 +41,22 @@ public class MainServer {
 			}
 		});
 		
-		listener.of("game").onData(new EventHandler<byte[]> () {
+		listener.of("game").onDataComing(new EventDataComing() {
 			@Override
-			public void handle(Object sender, String name, byte[] data) {
+			public void onDataComing(Client client, byte[] data) {
+				System.out.println("Room game recieve data from clientId: " + client.getClientId() + " - data: " + Util.byteArrayToString(data, "UTF-8"));
+			}
+		});
+		
+		listener.onClientJoinRoom(new RoomEvent() {
+			@Override
+			public void onClientJoinRoom(Client client, String from, String to) {
 				try {
-					Client client = (Client)sender;
+					client.broadcastEmit("client id " + client.getClientId() + " join room " + to);
 					
-					System.out.println("Room game recieve data from clientId: " + client.getClientId() + " - data: " + new String(data, "UTF-8"));
-				}catch(Exception exc){}
+					listener.of(from).emit("client id " + client.getClientId() + " leave room.");
+				}
+				catch(IOException ioe) {}
 			}
 		});
 	}

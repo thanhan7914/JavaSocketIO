@@ -6,12 +6,12 @@ import socket.io.*;
 
 public class TestClient {
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		Client client = new Client("localhost", 6969);
-		client.onData(new EventHandler<byte[]>() {
+		client.onDataComing(new EventDataComing () {
 			
 			@Override
-			public void handle(Object sender, String name, byte[] data) {
+			public void onDataComing(Client sender, byte[] data) {
 				try {
 					//get data
 					System.out.println("Client recieve data " + new String(data, "UTF-8"));

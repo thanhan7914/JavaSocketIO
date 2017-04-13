@@ -7,8 +7,10 @@ import java.util.ArrayList;
 
 public class Server extends Thread {
 	private boolean _isListen = true;
-	private EventHandler<byte[]> _eventDataComming = null;
-	private EventHandler<Client> _eventConnection = null;
+	private EventDataComing _eventDataComing = null;
+	private EventConnection _eventConnection = null;
+	private RoomEvent _eventClientJoinRoom = null;
+	private EventDisconnect _eventDisconnect = null;
 	private ServerSocket _serverSocket = null;
 	private ArrayList<Room> _rooms;
 	private ArrayList<Client> _clients;
@@ -23,6 +25,7 @@ public class Server extends Thread {
 		start();
 	}
 	
+	@Override
 	public void run() {
 		while(_isListen) {
 			try {
@@ -31,7 +34,7 @@ public class Server extends Thread {
 				_clients.add(client);
 				Thread t = new Thread(client);
 				if(_eventConnection != null)
-					_eventConnection.handle(this, "connection", client);
+					_eventConnection.onConnection(this, client);
 
 				t.start();
 			}
@@ -39,37 +42,78 @@ public class Server extends Thread {
 		}
 	}
 	
-	protected void DataRecieve(Client client, byte[] data) {
-		if(_eventDataComming != null)
-			_eventDataComming.handle(client, "data", data);
-		
-		for(Room room:_rooms)
-			if(client.getPath().startsWith(room.getPath()))
-				room.DataRecieve(client, data);
+	protected void clientDisconnect(Client client) {
+		if(_eventDisconnect != null)
+			_eventDisconnect.onDisconnect(client);
 	}
 	
-	//client call emit
+	protected void clientJoinRoom(Client client,  String from, String to) {
+		if(_eventClientJoinRoom != null)
+			_eventClientJoinRoom.onClientJoinRoom(client, from, to);
+	}
+	
+	protected void dataRecieve(Client client, byte[] data) {
+		if(_eventDataComing != null)
+			_eventDataComing.onDataComing(client, data);
+		
+		for(Room room:_rooms)
+			if(client.getPath().equals(room.getPath()))
+				room.dataRecieve(client, data);
+	}
+	
 	protected void emit(Client except, byte[] data) throws IOException {
 		for(Client client:_clients)
-			if(client.getClientId() != except.getClientId() && client.getPath().startsWith(except.getPath()))
+			if(client.getClientId() != except.getClientId() && client.getPath().equals(except.getPath()))
 				client.emitAsync(data);
 	}
 	
 	protected ArrayList<Client> getAllClient() {
 		return this._clients;
 	}
-
-	public void onConnection(EventHandler<Client> eventConnection) {
+	
+	public void onDataComing(EventDataComing eventDataComing) {
+		this._eventDataComing = eventDataComing;
+	}
+	
+	public void onConnection(EventConnection eventConnection) {
 		this._eventConnection = eventConnection;
 	}
 	
-	public void onData(EventHandler<byte[]> eventDataComming) {
-		this._eventDataComming = eventDataComming;
+	public void onClientJoinRoom(RoomEvent eventClientJoinRoom) {
+		this._eventClientJoinRoom = eventClientJoinRoom;
+	}
+	
+	public void onDisconnect(EventDisconnect eventDisconnect) {
+		this._eventDisconnect = eventDisconnect;
 	}
 	
 	public void emit(byte[] data) throws IOException {
 		for(Client client:_clients)
 			client.emitAsync(data);
+	}
+	
+	public void emit(String value) throws IOException {
+		emit(Util.stringToByteArrayWithUtf8(value));
+	}
+	
+	public void emit(float... floats) throws IOException {
+		emit(Util.toByteArray(floats));
+	}
+	
+	public void emit(int... integers) throws IOException {
+		emit(Util.toByteArray(integers));
+	}
+	
+	public void emit(long... longs) throws IOException {
+		emit(Util.toByteArray(longs));
+	}
+	
+	public void emit(double... doubles) throws IOException {
+		emit(Util.toByteArray(doubles));
+	}
+	
+	public void emit(boolean b) throws IOException {
+		emit(Util.toByteArray(b));
 	}
 	
 	public void removeClient() {
@@ -79,12 +123,30 @@ public class Server extends Thread {
 	}
 	
 	public Room of(String path) {
+		for(Room r:_rooms)
+			if(r.getPath().equals(Room.to(path)))
+				return r;
+		//create new room
 		Room room = new Room(this, path);
 		_rooms.add(room);
 		return room;
 	}
 	
+	public Client find(int clientId) {
+		for(Client client:_clients)
+			if(client.getClientId() == clientId)
+				return client;
+
+		return null;
+	}
+	
 	public int getLocalPort() {
 		return _serverSocket.getLocalPort();
+	}
+	
+	public void close() throws IOException {
+		this.interrupt();
+		_rooms.clear();
+		_clients.clear();
 	}
 }

@@ -3,17 +3,18 @@ package socket.io;
 import java.io.IOException;
 
 public class Room {
-	private EventHandler<byte[]> _eventDataComming = null;
+	private EventDataComing _eventDataComing = null;
 	private String _path;
 	private Server _server;
 	
 	protected Room(Server server, String path) {
-		this._path = to(path);
+		this._path = Room.to(path);
 		this._server = server;
 	}
 	
-	private String to(String path) {
-		if(path == "") return "/";
+	protected static String to(String path) {
+		path = path.trim();
+		if(path.equals("") || path.equals("/")) return "/";
 		path = path.trim();
 		path = path.replaceAll("//", "/");
 		if(!path.startsWith("/")) path = "/" + path;
@@ -21,13 +22,13 @@ public class Room {
 		return path;
 	}
 	
-	protected void DataRecieve(Object sender, byte[] data) {
-		if(_eventDataComming != null)
-			_eventDataComming.handle(sender, "data", data);
+	protected void dataRecieve(Client client, byte[] data) {
+		if(_eventDataComing != null)
+			_eventDataComing.onDataComing(client, data);
 	}
 	
-	public void onData(EventHandler<byte[]> eventDataComming) {
-		this._eventDataComming = eventDataComming;
+	public void onDataComing(EventDataComing eventDataComing) {
+		this._eventDataComing = eventDataComing;
 	}
 	
 	public String getPath() {
@@ -35,12 +36,36 @@ public class Room {
 	}
 	
 	public boolean has(Client client) {
-		return client.getPath().startsWith(_path);
+		return client.getPath().equals(_path);
 	}
 	
 	public void emit(byte[] data) throws IOException {
 		for(Client client:_server.getAllClient())
-			if(client.getPath().startsWith(_path))
+			if(client.getPath().equals(_path))
 				client.emitAsync(data);
+	}
+	
+	public void emit(String value) throws IOException {
+		emit(Util.stringToByteArrayWithUtf8(value));
+	}
+	
+	public void emit(float... floats) throws IOException {
+		emit(Util.toByteArray(floats));
+	}
+	
+	public void emit(int... integers) throws IOException {
+		emit(Util.toByteArray(integers));
+	}
+	
+	public void emit(long... longs) throws IOException {
+		emit(Util.toByteArray(longs));
+	}
+	
+	public void emit(double... doubles) throws IOException {
+		emit(Util.toByteArray(doubles));
+	}
+	
+	public void emit(boolean b) throws IOException {
+		emit(Util.toByteArray(b));
 	}
 }
