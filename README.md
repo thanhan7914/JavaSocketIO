@@ -6,35 +6,34 @@
    
 	 ```Server listener = new Server(6969);```
    
-   Listen:
+   Listen  (!important).
    
    `listener.listen();`
    
    handler connection
    ~~~~
-    listener.onConnection(new EventHandler<Client>() {
+    listener.onConnection(new EventConnection() {
 			@Override
-			public void handle(Object sender, String name, Client client) {
+			public void onConnection(Server sender, Client client) {
 				System.out.println("new connection, id: " + client.getClientId());
 				
-				client.onDisconnect(new EventHandler<byte[]>() {
+				client.onDisconnect(new EventDisconnect() {
 					@Override
-					public void handle(Object sender, byte[] data) {
+					public void onDisconnect(Client s) {
 						System.out.println("clientId: " + client.getClientId() + " disconnect.");
 					}
 				});
 			}
 		});
     ~~~~
-    data receive
+    waiting for data
     ~~~~
-		listener.onData(new EventHandler<byte[]>() {
+		listener.onDataComing(new EventDataComing() {
 			
 			@Override
-			public void handle(Object sender, String name, byte[] data) {
+			public void onDataComing(Client client, byte[] data) {
 				try {
-					Client client = (Client)sender;
-					System.out.println("recieve data: " + new String(data, "UTF-8"));
+					System.out.println("recieve data: " + Util.byteArrayToString(data, "UTF-8"));
 					client.broadcastEmit(data);
 				}
 				catch(IOException e) {}
@@ -50,13 +49,13 @@
     
     wait data
     ~~~~
-		client.onData(new EventHandler<byte[]>() {
+		client.onDataComing(new EventDataComing() {
 			
 			@Override
-			public void handle(Object sender, String name, byte[] data) {
+			public void onDataComing(Client client, byte[] data) {
 				try {
 					//get data
-					System.out.println("Client recieve data " + new String(data, "UTF-8"));
+					System.out.println("Client recieve data " + Util.byteArrayToString(data, "UTF-8"));
 				}
 				catch(IOException e) {}
 			}
@@ -64,7 +63,11 @@
     ~~~~
     Send data
     
-    `client.emit("Client: ok test");`
+    `client.emit("Client: test");`
+    
+    Send Async
+    
+    `client.emitAsync("Client: test");`
     
     Send data and waiting for response
     
