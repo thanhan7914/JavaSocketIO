@@ -179,7 +179,7 @@ public class Util {
 		int len = a1.length + a2.length;
 		byte[] data = new byte[len];
 		System.arraycopy(a1, 0, data, 0, a1.length);
-		System.arraycopy(a2, 0, data, 3, a2.length);
+		System.arraycopy(a2, 0, data, a1.length, a2.length);
 		
 		return data;
 	}
