@@ -11,6 +11,7 @@ public class Server extends Thread {
 	private EventConnection _eventConnection = null;
 	private RoomEvent _eventClientJoinRoom = null;
 	private EventDisconnect _eventDisconnect = null;
+	private PongEvent _pong = null;
 	private ServerSocket _serverSocket = null;
 	private ArrayList<Room> _rooms;
 	private ArrayList<Client> _clients;
@@ -61,6 +62,15 @@ public class Server extends Thread {
 				room.dataRecieve(client, data);
 	}
 	
+	protected void pingReply(Client client, byte[] data) {
+		if(_pong != null)
+			_pong.reply(client, data);
+		else
+			try {
+				client.emit(0);
+			}catch(Exception exc){}
+	}
+	
 	protected void emit(Client except, byte[] data) throws IOException {
 		for(Client client:_clients)
 			if(client.getClientId() != except.getClientId() && client.getPath().equals(except.getPath()))
@@ -85,6 +95,10 @@ public class Server extends Thread {
 	
 	public void onDisconnect(EventDisconnect eventDisconnect) {
 		this._eventDisconnect = eventDisconnect;
+	}
+	
+	public void onPing(PongEvent pong) {
+		this._pong = pong;
 	}
 	
 	public void emit(byte[] data) throws IOException {

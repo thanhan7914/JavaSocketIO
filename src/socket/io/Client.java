@@ -25,6 +25,7 @@ public class Client extends Thread {
     private final byte ETB = 0b00010111;
     private final byte GET_ID = 0b0;
     private final byte SET_PATH = 0b1;
+    private final byte NONE = 0b10;
     //temp
     private byte[] _tmp;
 	
@@ -121,7 +122,16 @@ public class Client extends Thread {
 		return this;
 	}
 	
-	public byte[] ping(byte[] data) throws IOException, InterruptedException {
+	public byte[] ping(byte[] rdata) throws IOException, InterruptedException {
+		byte[] data;
+		if(rdata[0] != ACK || rdata[1] != ENQ)
+		{
+			//insert 3 byte
+			data = Util.byteArrayConcat(new byte[]{ACK, ENQ, NONE},  rdata);
+		}
+		else
+			data = rdata.clone();
+		
 		_isBlock = true;
 		emit(data);
 		while(_isBlock) Thread.sleep(10);
@@ -153,6 +163,11 @@ public class Client extends Thread {
 			if(_server != null)
 				_server.clientJoinRoom(this, from, getPath());
 		}
+		break;
+		
+		default:
+			_server.pingReply(this, Arrays.copyOfRange(data, 3, data.length));
+			break;
 		}
 	}
 	
@@ -273,5 +288,9 @@ public class Client extends Thread {
 	
 	public boolean isClose() {
 		return !_isAlive;
+	}
+	
+	public boolean inRoom(String path) {
+		return Room.to(path).equals(_path);
 	}
 }
