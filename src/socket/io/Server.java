@@ -73,7 +73,7 @@ public class Server extends Thread {
 	
 	protected void emit(Client except, byte[] data) throws IOException {
 		for(Client client:_clients)
-			if(client.getClientId() != except.getClientId() && client.getPath().equals(except.getPath()))
+			if(client.getClientId() != except.getClientId())// && client.getPath().equals(except.getPath())
 				client.emitAsync(data);
 	}
 	

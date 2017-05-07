@@ -45,6 +45,12 @@ public class Room {
 				client.emitAsync(data);
 	}
 	
+	public void broadcastEmit(Client clt, byte[] data) throws IOException {
+		for(Client client:_server.getAllClient())
+			if(client.getClientId() != clt.getClientId() && client.getPath().equals(_path))
+				client.emitAsync(data);
+	}
+	
 	public void emit(String value) throws IOException {
 		emit(Util.stringToByteArrayWithUtf8(value));
 	}
@@ -67,5 +73,29 @@ public class Room {
 	
 	public void emit(boolean b) throws IOException {
 		emit(Util.toByteArray(b));
+	}
+	
+	public void broadcastEmit(Client client, String data) throws IOException {
+		broadcastEmit(client, Util.stringToByteArrayWithUtf8(data));
+	}
+	
+	public void broadcastEmit(Client client, float... floats) throws IOException {
+		broadcastEmit(client, Util.toByteArray(floats));
+	}
+	
+	public void broadcastEmit(Client client, int... integers) throws IOException {
+		broadcastEmit(client, Util.toByteArray(integers));
+	}
+	
+	public void broadcastEmit(Client client, long... longs) throws IOException {
+		broadcastEmit(client, Util.toByteArray(longs));
+	}
+	
+	public void broadcastEmit(Client client, double... doubles) throws IOException {
+		broadcastEmit(client, Util.toByteArray(doubles));
+	}
+	
+	public void broadcastEmit(Client client, boolean b) throws IOException {
+		broadcastEmit(client, Util.toByteArray(b));
 	}
 }
