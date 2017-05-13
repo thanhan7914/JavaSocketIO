@@ -1,6 +1,7 @@
 package socket.io;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class Room {
 	private EventDataComing _eventDataComing = null;
@@ -37,6 +38,16 @@ public class Room {
 	
 	public boolean has(Client client) {
 		return client.getPath().equals(_path);
+	}
+	
+	public ArrayList<Client> getAllClient() {
+		ArrayList<Client> clients = new ArrayList<Client>();
+		
+		for(Client client:_server.getAllClient())
+			if(client.getPath().equals(_path))
+				clients.add(client);
+		
+		return clients;
 	}
 	
 	public void emit(byte[] data) throws IOException {

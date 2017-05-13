@@ -77,7 +77,7 @@ public class Server extends Thread {
 				client.emitAsync(data);
 	}
 	
-	protected ArrayList<Client> getAllClient() {
+	public ArrayList<Client> getAllClient() {
 		return this._clients;
 	}
 	
