@@ -77,6 +77,19 @@ public class Server extends Thread {
 				client.emitAsync(data);
 	}
 	
+	public void emitWithout(byte[] data, Client... except) throws IOException {
+		for(Client client:_clients)
+		{
+			boolean exists = false;
+			for(Client exc:except)
+				if(exists = (client.getClientId() == exc.getClientId()))
+					break;
+			
+			if(!exists)
+				client.emitAsync(data);
+		}
+	}
+	
 	public ArrayList<Client> getAllClient() {
 		return this._clients;
 	}
